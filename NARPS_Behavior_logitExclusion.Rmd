@@ -1,0 +1,64 @@
+---
+title: "NARPS behavioral analysis"
+output: html_notebook
+---
+
+For each subject, test whether they show significant effect of gain/loss on choices.
+
+```{r}
+library(arm)
+
+
+run_logreg=function(intercept) {
+  basedir='PATH OF BEHAVIORAL DATA HERE'
+  subjects=c(1:22, 24:27, 29:85, 87:90, 92:124)
+  if (intercept==1){
+    print('using model with intercept')
+  } else {
+     print('using model with no intercept')
+   
+  }
+  for (s in subjects){
+    for (r in 1:4){
+      infile=sprintf('%s/sub-%03d_task-MGT_run-%02d.txt',basedir,s,r)
+      tmp=read.table(infile,header=TRUE)
+      if (r==1){
+        d=tmp
+      } else {
+          d=rbind(d,tmp)
+      }
+    }
+  
+  
+    if (intercept==1){
+      prior=10
+     #lr.result=bayesglm(BinaryResp ~  WinSum + LoseSum,family='binomial',
+     #              data=d,prior.df=prior)
+      lr.result=glm(BinaryResp ~  WinSum + LoseSum,data=d,family = binomial(link = "logit"))
+      gainrow=2
+      lossrow=3
+      lr.summ=summary(lr.result)
+      intcp=lr.summ$coefficients[1,1]
+     
+    } else {
+      prior=5
+      lr.result=bayesglm(BinaryResp ~ 0 + WinSum + LoseSum,family='binomial',
+                    data=d,prior.df=prior)
+      gainrow=1
+      lossrow=2
+      lr.summ=summary(lr.result)
+      intcp=0
+    }
+    print(sprintf('%d meanresp=%0.2f intercept = %0.3f,gain=%0.3f p=%0.3f loss=%0.3f p=%0.3f lambda=%0.3f %s',
+                  s,mean(d$BinaryResp),intcp,
+                  lr.summ$coefficients[gainrow,1],
+                  lr.summ$coefficients[gainrow,4],
+                  lr.summ$coefficients[lossrow,1],lr.summ$coefficients[lossrow,4],
+                  lr.summ$coefficients[lossrow,1]/lr.summ$coefficients[gainrow,1],
+                  d$Condition[1]))
+  }
+}
+
+run_logreg(0)
+run_logreg(1)
+```
